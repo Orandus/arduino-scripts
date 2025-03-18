@@ -1,8 +1,8 @@
 /*
-Sample code for ESP32 C6 development board. 
+Code for ESP32 C6 development board. 
 
-original author: h4fide
-please visit: https://github.com/h4fide/ESP32-C6-RGB-LED-Control
+Purpose is to connect to WiFi Network, stored in Preferences.h and send some data to a 
+remote API.
 */
 #include <Preferences.h>
 #include <Adafruit_NeoPixel.h>
@@ -40,6 +40,8 @@ void setup() {
     delay(1000);
     setColor(COLOR_RED);
     
+    connectToWifi();
+
     macAddress = WiFi.macAddress();
     Serial.println("Mac Address: " + macAddress);
 }
