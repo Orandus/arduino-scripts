@@ -7,6 +7,13 @@ remote API.
 #include <Preferences.h>
 #include <Adafruit_NeoPixel.h>
 #include <WiFi.h>
+#include <DHT.h>
+
+
+#define DHT22_PIN  21 // ESP32 pin GPIO21 connected to DHT22 sensor
+DHT dht22(DHT22_PIN, DHT22);
+
+const char* serverUrl = "http://192.168.0.152:8001/temp_hum_sensor_data/";
 
 Preferences preferences;
 
@@ -44,6 +51,8 @@ void setup() {
 
     macAddress = WiFi.macAddress();
     Serial.println("Mac Address: " + macAddress);
+
+    dht22.begin(); // initialize the DHT22 sensor
 }
 
 void connectToWifi(){
@@ -78,5 +87,56 @@ void setColor(const RGB& color) {
 }
 
 void loop() {
+    // read humidity
+    float humi  = dht22.readHumidity();
+    // read temperature in Celsius
+    float tempC = dht22.readTemperature();
 
+    // check whether the reading is successful or not
+    if ( isnan(tempC) || isnan(humi)) {
+      Serial.println("Failed to read from DHT22 sensor!");
+    } else {
+      Serial.print("Humidity: ");
+      Serial.print(humi);
+      Serial.print("%");
+
+      Serial.print("  |  ");
+
+      Serial.print("Temperature: ");
+      Serial.print(tempC);
+      Serial.print("°C  ~  ");
+    }
+
+      // Get current datetime (replace with RTC or NTP if needed)
+    String datetime = "2025-03-19T12:34:56";  // Replace with actual datetime logic
+
+    // Create JSON payload
+    String payload = "{";
+    payload += "\"temperature\":" + String(temperature, 2) + ",";
+    payload += "\"humidity\":" + String(humidity, 2) + ",";
+    payload += "\"macaddress\":\"" + String(macAddress) + "\",";
+    payload += "}";
+
+    // Send HTTP POST request
+    if (WiFi.status() == WL_CONNECTED) {
+      HTTPClient http;
+      http.begin(serverUrl);
+      http.addHeader("Content-Type", "application/json");
+
+      int httpResponseCode = http.POST(payload);
+
+      if (httpResponseCode > 0) {
+        String response = http.getString();
+        Serial.println("Response: " + response);
+      } else {
+        Serial.println("Error on sending POST: " + String(httpResponseCode));
+      }
+
+      http.end();
+    } else {
+      Serial.println("WiFi not connected");
+    }
+
+    // Wait before sending the next reading
+    delay(300000);  // Send data every 10 seconds
 }
